@@ -1,0 +1,5 @@
+pytest
+pytest-mock
+black
+isort
+mypy
