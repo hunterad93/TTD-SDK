@@ -1,27 +1,27 @@
 from typing import Iterator, Optional, Dict, List
-from ..models.advertiser import Advertiser
+from ..models.base import ApiObject
 
 class AdvertiserResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "advertiser"
     
-    def get(self, advertiser_id: str) -> Advertiser:
+    def get(self, advertiser_id: str) -> ApiObject:
         """
         Get an advertiser by ID.
         """
         response = self.client.get(f"{self.base_path}/{advertiser_id}")
-        return Advertiser.model_validate(response)
+        return ApiObject(**response)
     
-    def update(self, advertiser_id: str, advertiser: Advertiser) -> Advertiser:
+    def update(self, advertiser_id: str, advertiser: ApiObject) -> ApiObject:
         """
         Update an existing advertiser.
         
         Supports partial updates - only fields that are provided will be updated.
         """
-        data = advertiser.model_dump(exclude_none=True)
+        data = advertiser.to_dict()
         response = self.client.put(f"{self.base_path}/{advertiser_id}", data)
-        return Advertiser.model_validate(response)
+        return ApiObject(**response)
     
     def list(
         self,
@@ -29,7 +29,7 @@ class AdvertiserResource:
         sort_fields: Optional[List[Dict[str, str]]] = None,
         search_terms: Optional[List[str]] = None,
         availabilities: Optional[List[str]] = None,
-    ) -> Iterator[Advertiser]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of all advertisers for the partner.
         
@@ -54,4 +54,11 @@ class AdvertiserResource:
             data=data,
             page_size=page_size
         ):
-            yield Advertiser.model_validate(result)
+            yield ApiObject(**result)
+    
+    def get_name(self, advertiser_id: str) -> str:
+        """
+        Get an advertiser's name by ID.
+        """
+        response = self.client.get(f"{self.base_path}/name/{advertiser_id}")
+        return response["Name"]

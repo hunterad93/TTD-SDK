@@ -1,12 +1,12 @@
 from typing import Iterator, Optional, Dict, List
-from ..models.first_party_element import FirstPartyElement
+from ..models.base import ApiObject
 
 class FirstPartyElementResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "dmp/firstparty"
     
-    def get(self, element_id: int, advertiser_id: str) -> FirstPartyElement:
+    def get(self, element_id: int, advertiser_id: str) -> ApiObject:
         """
         Get details of a specific first party data element.
         """
@@ -26,7 +26,7 @@ class FirstPartyElementResource:
         sort_fields: Optional[List[Dict[str, str]]] = None,
         first_party_data_ids: Optional[List[int]] = None,
         search_terms: Optional[List[str]] = None,
-    ) -> Iterator[FirstPartyElement]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of first party data elements with optional filtering.
         
@@ -52,4 +52,4 @@ class FirstPartyElementResource:
             data=data,
             page_size=page_size
         ):
-            yield FirstPartyElement.model_validate(result) 
+            yield ApiObject(**result)

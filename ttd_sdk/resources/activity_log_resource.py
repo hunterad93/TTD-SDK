@@ -1,15 +1,16 @@
-from datetime import datetime, UTC
+from datetime import datetime
 from typing import Iterator, Optional, List
-from ..models.activity_log import ActivityLog
+from ..models.base import ApiObject
 
 class ActivityLogResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "activity"
     
-    def get(self, activity_log_id: int) -> ActivityLog:
+    def get(self, activity_log_id: int) -> ApiObject:
+        """Get an activity log entry by ID."""
         response = self.client.get(f"{self.base_path}/{activity_log_id}")
-        return ActivityLog.model_validate(response)
+        return ApiObject(**response)
     
     def list_by_campaign(
         self,
@@ -21,7 +22,8 @@ class ActivityLogResource:
         source: Optional[str] = None,
         updated_by: Optional[str] = None,
         updated_in: Optional[List[str]] = None,
-    ) -> Iterator[ActivityLog]:
+    ) -> Iterator[ApiObject]:
+        """Get activity logs for a campaign."""
         data = {
             "CampaignId": campaign_id,
             "IncludeBidLineDetails": include_bid_line_details,
@@ -43,7 +45,7 @@ class ActivityLogResource:
             data=data,
             page_size=page_size
         ):
-            yield ActivityLog.model_validate(result)
+            yield ApiObject(**result)
     
     def list_by_ad_group(
         self,
@@ -55,7 +57,8 @@ class ActivityLogResource:
         source: Optional[str] = None,
         updated_by: Optional[str] = None,
         updated_in: Optional[List[str]] = None,
-    ) -> Iterator[ActivityLog]:
+    ) -> Iterator[ApiObject]:
+        """Get activity logs for an ad group."""
         data = {
             "AdGroupId": ad_group_id,
             "IncludeBidLineDetails": include_bid_line_details,
@@ -77,4 +80,4 @@ class ActivityLogResource:
             data=data,
             page_size=page_size
         ):
-            yield ActivityLog.model_validate(result)
+            yield ApiObject(**result)

@@ -34,6 +34,8 @@ from .resources.third_party_element_resource import ThirdPartyElementResource
 from .resources.universal_pixel_resource import UniversalPixelResource
 from .resources.ad_group_resource import AdGroupResource
 from .resources.activity_log_resource import ActivityLogResource
+from .resources.additional_fees_resource import AdditionalFeesResource
+from .resources.bid_list_resource import BidListResource
 
 Method = Literal["GET", "POST"]
 
@@ -104,6 +106,8 @@ class TTDClient:
         self.universal_pixels = UniversalPixelResource(self)
         self.ad_groups = AdGroupResource(self)
         self.activity_logs = ActivityLogResource(self)
+        self.additional_fees = AdditionalFeesResource(self)
+        self.bid_lists = BidListResource(self)
         logger.info("TTD client initialized successfully")
 
     def _get_headers(self) -> Dict[str, str]:
@@ -114,64 +118,68 @@ class TTDClient:
             "Content-Type": "application/json"
         }
 
-    def _handle_request_error(self, error: requests.exceptions.RequestException) -> None:
-        if not error.response:
-            logger.error(f"Request failed without response: {error}")
-            raise ClientError(str(error))
-            
-        status_code = error.response.status_code
+    def _handle_response(self, response: requests.Response) -> Dict:
+        """Handle response and raise appropriate exceptions"""
+        status_code = response.status_code
+        
+        if status_code < 400:
+            return response.json()
+        
         try:
-            error_data = error.response.json()
+            error_data = response.json()
         except ValueError:
             error_data = {}
         
-        request_id = error.response.headers.get('X-Request-ID')
-        error_code = error_data.get('ErrorCode')
-        message = error_data.get('Message', str(error))
-        
-        logger.error(f"Request failed: {status_code} - {message} (Request ID: {request_id})")
-        
         error_kwargs = {
-            "message": message,
+            "message": str(response.reason),
             "status_code": status_code,
-            "error_code": error_code,
-            "request_id": request_id,
+            "error_code": error_data.get('ErrorCode'),
+            "request_id": response.headers.get('X-TTD-Request-ID'),
             "response_data": error_data,
-            "response": error.response
+            "response": response
         }
         
-        if status_code == 401:
+        if status_code == 429:
+            raise RateLimitError(**error_kwargs)
+        elif status_code >= 500:
+            raise ServerError(**error_kwargs)
+        elif status_code == 401:
             raise AuthenticationError(**error_kwargs)
         elif status_code == 403:
             raise PermissionError(**error_kwargs)
         elif status_code == 404:
             raise ResourceNotFoundError(**error_kwargs)
-        elif status_code == 429:
-            raise RateLimitError(**error_kwargs)
-        elif status_code >= 500:
-            raise ServerError(**error_kwargs)
         else:
             raise ClientError(**error_kwargs)
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict:
+        """Make HTTP request with retry handling"""
         url = f"{self.base_url}/{self.API_VERSION}/{endpoint.lstrip('/')}"
         
         kwargs["headers"] = self._get_headers()
         kwargs["timeout"] = self.timeout
 
-        logger.debug(f"Making {method} request to {endpoint}")
+        logger.debug(
+            f"Making request: {method} {url}"
+            f"\nParams: {kwargs.get('params')}"
+            f"\nBody: {kwargs.get('json')}"
+        )
 
         def request_with_retry():
             try:
                 response = requests.request(method, url, **kwargs)
-                response.raise_for_status()
                 
-                data = response.json()
-                logger.debug(f"Received response from {endpoint}: {str(data)[:100]}...")
+                logger.debug(
+                    f"Response: {response.status_code} {response.reason}"
+                    f"\nResponse body: {response.json()}"
+                )
                 
-                return data
+                return self._handle_response(response)
+                
             except requests.exceptions.RequestException as e:
-                self._handle_request_error(e)
+                if e.response:
+                    return self._handle_response(e.response)
+                raise ClientError(message=str(e))
 
         return self.retry_handler.execute(request_with_retry)
 

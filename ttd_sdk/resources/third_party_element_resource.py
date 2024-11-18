@@ -1,12 +1,12 @@
 from typing import Iterator, Optional, Dict, Any, List
-from ..models.third_party_element import ThirdPartyElement, ThirdPartyBrand
+from ..models.base import ApiObject
 
 class ThirdPartyElementResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "dmp/thirdparty"
     
-    def get(self, element_id: str, advertiser_id: str) -> ThirdPartyElement:
+    def get(self, element_id: str, advertiser_id: str) -> ApiObject:
         """
         Get details of a specific third party data element.
         """
@@ -25,7 +25,7 @@ class ThirdPartyElementResource:
         advertiser_id: str,
         page_size: int = 1000,
         sort_fields: Optional[List[Dict[str, str]]] = None,
-    ) -> Iterator[ThirdPartyElement]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of third party data elements for a specific brand.
         """
@@ -44,7 +44,7 @@ class ThirdPartyElementResource:
         brand_ids: Optional[List[str]] = None,
         third_party_data_ids: Optional[List[str]] = None,
         search_terms: Optional[List[str]] = None,
-    ) -> Iterator[ThirdPartyElement]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of third party data elements with optional filtering.
         
@@ -75,9 +75,9 @@ class ThirdPartyElementResource:
             data=data,
             page_size=page_size
         ):
-            yield ThirdPartyElement.model_validate(result)
+            yield ApiObject(**result)
     
-    def get_available_brands(self, advertiser_id: str) -> List[ThirdPartyBrand]:
+    def get_available_brands(self, advertiser_id: str) -> List[ApiObject]:
         """
         Get a list of third party data brands available to an advertiser.
         
@@ -85,14 +85,14 @@ class ThirdPartyElementResource:
             advertiser_id: The platform ID of the advertiser
         """
         response = self.client.get(f"{self.base_path}/facets/{advertiser_id}")
-        return [ThirdPartyBrand.model_validate(brand) for brand in response["Brands"]]
+        return [ApiObject(**brand) for brand in response["Brands"]]
     
     def bulk_third_party_query(
         self,
         advertiser_id: str,
         page_size: int = 1000,
         sort_fields: Optional[List[Dict[str, str]]] = None,
-    ) -> Iterator[ThirdPartyElement]:
+    ) -> Iterator[ApiObject]:
         """
         Get all third party data elements across all available brands for an advertiser.
         
@@ -103,7 +103,7 @@ class ThirdPartyElementResource:
         """
         # First get all available brand IDs
         brands = self.get_available_brands(advertiser_id)
-        brand_ids = [brand.brand_id for brand in brands if brand.brand_id]
+        brand_ids = [brand.BrandId for brand in brands if getattr(brand, 'BrandId', None)]
         
         if not brand_ids:
             return iter([])  # Return empty iterator if no brands available

@@ -15,7 +15,6 @@ setup(
     packages=find_packages(exclude=["tests*"]),
     install_requires=[
         "requests>=2.32.3",
-        "pydantic>=2.7.3",
         "python-dotenv>=1.0.1",
     ],
     extras_require={

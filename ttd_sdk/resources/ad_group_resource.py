@@ -1,38 +1,36 @@
 from typing import Iterator, Optional, Dict, List
-from ..models.ad_group import AdGroup
+from ..models.base import ApiObject
 
 class AdGroupResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "adgroup"
     
-    def get(self, ad_group_id: str) -> AdGroup:
-        """
-        Get an ad group by ID.
-        """
+    def get(self, ad_group_id: str) -> ApiObject:
+        """Get an ad group by ID."""
         response = self.client.get(f"{self.base_path}/{ad_group_id}")
-        return AdGroup.model_validate(response)
+        return ApiObject(**response)
     
-    def create(self, ad_group: AdGroup) -> AdGroup:
-        """
-        Create a new ad group.
-        """
-        if not ad_group.ad_group_name or not ad_group.campaign_id:
-            raise ValueError("ad_group_name and campaign_id are required")
+    def create(self, ad_group: ApiObject) -> ApiObject:
+        """Create a new ad group."""
+        if not getattr(ad_group, 'AdGroupName', None) or not getattr(ad_group, 'CampaignId', None):
+            raise ValueError("AdGroupName and CampaignId are required")
         
-        data = ad_group.model_dump(exclude_none=True)
+        data = ad_group.to_dict()
         response = self.client.post(self.base_path, data)
-        return AdGroup.model_validate(response)
+        return ApiObject(**response)
     
-    def update(self, ad_group_id: str, ad_group: AdGroup) -> AdGroup:
+    def update(self, ad_group_id: str, ad_group: ApiObject) -> ApiObject:
         """
         Update an existing ad group.
         
         Supports partial updates - only fields that are provided will be updated.
         """
-        data = ad_group.model_dump(exclude_none=True)
-        response = self.client.put(f"{self.base_path}/{ad_group_id}", data)
-        return AdGroup.model_validate(response)
+        data = ad_group.to_dict()
+        data["AdGroupId"] = ad_group_id
+        
+        response = self.client.put(self.base_path, data)
+        return ApiObject(**response)
     
     def list_by_campaign(
         self,
@@ -41,7 +39,7 @@ class AdGroupResource:
         sort_fields: Optional[List[Dict[str, str]]] = None,
         search_terms: Optional[List[str]] = None,
         availabilities: Optional[List[str]] = None,
-    ) -> Iterator[AdGroup]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of ad groups for a campaign.
         
@@ -66,4 +64,34 @@ class AdGroupResource:
             data=data,
             page_size=page_size
         ):
-            yield AdGroup.model_validate(result) 
+            yield ApiObject(**result) 
+
+    def list_by_advertiser(
+        self,
+        advertiser_id: str,
+        page_size: int = 1000,
+        sort_fields: Optional[List[Dict[str, str]]] = None,
+        search_terms: Optional[List[str]] = None,
+        availabilities: Optional[List[str]] = None,
+        is_template_ad_groups: Optional[bool] = None,
+    ) -> Iterator[ApiObject]:
+        """Get a paginated list of ad groups for an advertiser."""
+        data = {"AdvertiserId": advertiser_id}
+        
+        if sort_fields:
+            data["SortFields"] = sort_fields
+        if search_terms:
+            data["SearchTerms"] = search_terms
+        if availabilities:
+            data["Availabilities"] = availabilities
+        if is_template_ad_groups is not None:
+            data["IsTemplateAdGroups"] = is_template_ad_groups
+        
+        for result in self.client.post_with_pagination(
+            f"{self.base_path}/query/advertiser",
+            data=data,
+            page_size=page_size
+        ):
+            yield ApiObject(**result)
+
+        

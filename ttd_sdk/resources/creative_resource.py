@@ -1,38 +1,38 @@
 from typing import Iterator, Optional, Dict, List
-from ..models.creative import Creative
+from ..models.base import ApiObject
 
 class CreativeResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "creative"
     
-    def create(self, creative: Creative) -> Creative:
+    def create(self, creative: ApiObject) -> ApiObject:
         """
         Create a new creative.
         """
-        if not creative.creative_name or not creative.advertiser_id:
-            raise ValueError("creative_name and advertiser_id are required")
+        if not getattr(creative, 'CreativeName', None) or not getattr(creative, 'AdvertiserId', None):
+            raise ValueError("CreativeName and AdvertiserId are required")
         
-        data = creative.model_dump(exclude_none=True)
+        data = creative.to_dict()
         response = self.client.post(self.base_path, data)
-        return Creative.model_validate(response)
+        return ApiObject(**response)
     
-    def get(self, creative_id: str) -> Creative:
+    def get(self, creative_id: str) -> ApiObject:
         """
         Get a creative by ID.
         """
         response = self.client.get(f"{self.base_path}/{creative_id}")
-        return Creative.model_validate(response)
+        return ApiObject(**response)
     
-    def update(self, creative_id: str, creative: Creative) -> Creative:
+    def update(self, creative_id: str, creative: ApiObject) -> ApiObject:
         """
         Update an existing creative.
         
         Supports partial updates - only fields that are provided will be updated.
         """
-        data = creative.model_dump(exclude_none=True)
+        data = creative.to_dict()
         response = self.client.put(f"{self.base_path}/{creative_id}", data)
-        return Creative.model_validate(response)
+        return ApiObject(**response)
     
     def list_by_advertiser(
         self,
@@ -41,7 +41,7 @@ class CreativeResource:
         sort_fields: Optional[List[Dict[str, str]]] = None,
         search_terms: Optional[List[str]] = None,
         availabilities: Optional[List[str]] = None,
-    ) -> Iterator[Creative]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of creatives for an advertiser.
         
@@ -52,7 +52,6 @@ class CreativeResource:
             search_terms: Optional list of search terms to filter by
             availabilities: Optional list of availability states to filter by
         """
-            
         data = {"AdvertiserId": advertiser_id}
         
         if sort_fields:
@@ -67,4 +66,4 @@ class CreativeResource:
             data=data,
             page_size=page_size
         ):
-            yield Creative.model_validate(result) 
+            yield ApiObject(**result)

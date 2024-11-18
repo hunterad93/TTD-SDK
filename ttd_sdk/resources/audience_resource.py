@@ -1,38 +1,38 @@
 from typing import Iterator, Optional, Dict, List
-from ..models.audience import Audience
+from ..models.base import ApiObject
 
 class AudienceResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "audience"
     
-    def create(self, audience: Audience) -> Audience:
+    def create(self, audience: ApiObject) -> ApiObject:
         """
         Create a new audience.
         """
-        if not audience.audience_name or not audience.advertiser_id:
-            raise ValueError("audience_name and advertiser_id are required")
+        if not getattr(audience, 'AudienceName', None) or not getattr(audience, 'AdvertiserId', None):
+            raise ValueError("AudienceName and AdvertiserId are required")
         
-        data = audience.model_dump(exclude_none=True)
+        data = audience.to_dict()
         response = self.client.post(self.base_path, data)
-        return Audience.model_validate(response)
+        return ApiObject(**response)
     
-    def get(self, audience_id: str) -> Audience:
+    def get(self, audience_id: str) -> ApiObject:
         """
         Get an audience by ID.
         """
         response = self.client.get(f"{self.base_path}/{audience_id}")
-        return Audience.model_validate(response)
+        return ApiObject(**response)
     
-    def update(self, audience_id: str, audience: Audience) -> Audience:
+    def update(self, audience_id: str, audience: ApiObject) -> ApiObject:
         """
         Update an existing audience.
         
         Supports partial updates - only fields that are provided will be updated.
         """
-        data = audience.model_dump(exclude_none=True)
+        data = audience.to_dict()
         response = self.client.put(f"{self.base_path}/{audience_id}", data)
-        return Audience.model_validate(response)
+        return ApiObject(**response)
     
     def list_by_advertiser(
         self,
@@ -40,7 +40,7 @@ class AudienceResource:
         page_size: int = 1000,
         sort_fields: Optional[List[Dict[str, str]]] = None,
         search_terms: Optional[List[str]] = None,
-    ) -> Iterator[Audience]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of audiences for an advertiser.
         
@@ -50,7 +50,6 @@ class AudienceResource:
             sort_fields: Optional list of sort field configurations
             search_terms: Optional list of search terms to filter by
         """
-            
         data = {"AdvertiserId": advertiser_id}
         
         if sort_fields:
@@ -63,4 +62,4 @@ class AudienceResource:
             data=data,
             page_size=page_size
         ):
-            yield Audience.model_validate(result) 
+            yield ApiObject(**result)

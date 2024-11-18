@@ -1,38 +1,38 @@
 from typing import Iterator, Optional, Dict, Any, List
-from ..models.data_group import DataGroup
+from ..models.base import ApiObject
 
 class DataGroupResource:
     def __init__(self, client):
         self.client = client
         self.base_path = "datagroup"
     
-    def create(self, data_group: DataGroup) -> DataGroup:
+    def create(self, data_group: ApiObject) -> ApiObject:
         """
         Create a new data group.
         """
-        if not data_group.data_group_name or not data_group.advertiser_id:
-            raise ValueError("data_group_name and advertiser_id are required")
+        if not getattr(data_group, 'DataGroupName', None) or not getattr(data_group, 'AdvertiserId', None):
+            raise ValueError("DataGroupName and AdvertiserId are required")
         
-        data = data_group.model_dump(exclude_none=True)
+        data = data_group.to_dict()
         response = self.client.post(self.base_path, data)
-        return DataGroup.model_validate(response)
+        return ApiObject(**response)
     
-    def get(self, data_group_id: str) -> DataGroup:
+    def get(self, data_group_id: str) -> ApiObject:
         """
         Get a data group by ID.
         """
         response = self.client.get(f"{self.base_path}/{data_group_id}")
-        return DataGroup.model_validate(response)
+        return ApiObject(**response)
     
-    def update(self, data_group_id: str, data_group: DataGroup) -> DataGroup:
+    def update(self, data_group_id: str, data_group: ApiObject) -> ApiObject:
         """
         Update an existing data group.
         
         Supports partial updates - only fields that are provided will be updated.
         """
-        data = data_group.model_dump(exclude_none=True)
+        data = data_group.to_dict()
         response = self.client.put(f"{self.base_path}/{data_group_id}", data)
-        return DataGroup.model_validate(response)
+        return ApiObject(**response)
     
     def list_by_advertiser(
         self,
@@ -40,7 +40,7 @@ class DataGroupResource:
         page_size: int = 100,
         search_terms: Optional[List[str]] = None,
         sort_fields: Optional[List[Dict[str, str]]] = None,
-    ) -> Iterator[DataGroup]:
+    ) -> Iterator[ApiObject]:
         """
         Get a paginated list of data groups for an advertiser.
         
@@ -62,4 +62,4 @@ class DataGroupResource:
             data=data,
             page_size=page_size
         ):
-            yield DataGroup.model_validate(result)
+            yield ApiObject(**result)
