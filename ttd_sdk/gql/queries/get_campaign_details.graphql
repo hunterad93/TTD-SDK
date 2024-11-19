@@ -1,0 +1,46 @@
+query GetCampaignDetails($id: ID!) {
+  campaign(id: $id) {
+    # Campaign level info
+    autoAllocatorEnabled
+    budgetInImpressions
+    budget {
+      currentOrUpComing
+      total
+    }
+    budgetMigrationStatus
+
+    # Ad Groups
+    adGroups {
+      edges {
+        node {
+          # Ad Group level info
+          baseBidCPMInAdvertiserCurrency
+          budgetInAdvertiserCurrency
+          budgetInImpressions
+          isEnabled
+
+          # Ad Group Flights
+          adGroupFlights {
+            edges {
+              node {
+                adGroupId
+                budgetInAdvertiserCurrency
+                budgetInImpressions
+                campaignFlightId
+                dailyTargetInAdvertiserCurrency
+                dailyTargetInImpressions
+                minimumSpendInAdvertiserCurrency
+                forecast {
+                  confidence
+                  projectedSpend
+                  lastUpdated
+                  relevance
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} 
