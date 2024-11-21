@@ -1,0 +1,18 @@
+
+from enum import Enum
+
+class GeoSegmentType(Enum):
+    """
+    None
+    """
+    ADVERTISER_SPECIFIC = "ADVERTISER_SPECIFIC"
+    ALL = "ALL"
+    CITY = "CITY"
+    COUNTRY = "COUNTRY"
+    CUSTOM_ONLY = "CUSTOM_ONLY"
+    METRO = "METRO"
+    PARTNER_SPECIFIC = "PARTNER_SPECIFIC"
+    POSTAL_CODE = "POSTAL_CODE"
+    REGION = "REGION"
+    STANDARD_ONLY = "STANDARD_ONLY"
+    UNKNOWN = "UNKNOWN"

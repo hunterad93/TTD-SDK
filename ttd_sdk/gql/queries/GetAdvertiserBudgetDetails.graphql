@@ -1,0 +1,56 @@
+query GetAdvertiserBudgetDetails($id: ID = "", $endDate: DateTime!) {
+  advertiser(id: $id) {
+    campaigns(
+      where: {
+        isArchived: {eq: false}
+        endDate: {gte: $endDate}
+      }
+    ) {
+      nodes {
+        id
+        budget {
+          total
+          currentOrUpComing
+        }
+        pacingMode
+        pacingToEndOfFlightDailyRate
+        campaignPacingSettings {
+          isValuePacing
+        }
+        flights {
+          nodes {
+            startDateInclusiveUTC
+            endDateExclusiveUTC
+            budgetInAdvertiserCurrency
+            budgetAllocationMode
+            dailyTargetInAdvertiserCurrency
+            daysRemaining
+            id
+            minimumSpendInAdvertiserCurrency
+          }
+        }
+        adGroups(where: {isEnabled: {eq: true}}) {
+          nodes {
+            id
+            baseBidCPMInAdvertiserCurrency
+            budget {
+              total
+              isFluid
+              currentFlightBudget
+            }
+            spend {
+              spend
+              riskLevel
+            }
+            adGroupFlights {
+              nodes {
+                dailyTargetInAdvertiserCurrency
+                minimumSpendInAdvertiserCurrency
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

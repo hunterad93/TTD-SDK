@@ -7,7 +7,6 @@ query GetCampaignDetails($id: ID!) {
       currentOrUpComing
       total
     }
-    budgetMigrationStatus
 
     # Ad Groups
     adGroups {

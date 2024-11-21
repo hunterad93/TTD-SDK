@@ -1,0 +1,29 @@
+query GetCampaignAndAdGroupFlightsExample($id: ID = "", $campaign_cursor: String = "", $flight_cursor: String = "") {
+  advertiser(id: $id) {
+    id
+    name
+    campaigns(after: $campaign_cursor) {
+      nodes {
+        id
+        name
+        flights(after: $flight_cursor) {
+          nodes {
+            budgetInAdvertiserCurrency
+            startDateInclusiveUTC
+            endDateExclusiveUTC
+            isCurrent
+            id
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

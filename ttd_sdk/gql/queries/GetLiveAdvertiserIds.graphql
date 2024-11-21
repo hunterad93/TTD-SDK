@@ -1,0 +1,10 @@
+query GetLiveAdvertiserIds($id: ID = "") {
+  partner(id: $id) {
+    advertisers {
+      nodes {
+        id
+        isWithLiveCampaigns
+      }
+    }
+  }
+}

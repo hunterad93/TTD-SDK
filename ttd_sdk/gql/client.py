@@ -1,105 +1,119 @@
-from dataclasses import dataclass, make_dataclass
+import httpx
+import json
 from enum import Enum
 from pathlib import Path
-from typing import Optional, TypeVar, Generic, Any
-import httpx
+from typing import Optional
 
-T = TypeVar('T')
+from ..logging import (
+    configure_sdk_logging, 
+    get_logger, 
+    LogLevel,
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    CRITICAL
+)
 
-class Environment(Enum):
-    SANDBOX = "https://ext-api.sb.thetradedesk.com/graphql"
-    PRODUCTION = "https://api.gen.adsrvr.org/graphql"
-
-@dataclass
-class GraphQLResponse(Generic[T]):
-    data: Optional[T]
-    errors: list[dict]
+logger = get_logger(__name__)
 
 class TTDGraphQLClient:
-    def __init__(self, api_key: str, environment: Environment = Environment.SANDBOX):
+    def __init__(
+        self, 
+        api_key: str, 
+        sandbox: bool = True,
+        timeout: float = 120.0,
+        max_retries: int = 3,
+        log_level: Optional[LogLevel | int] = None,
+        log_file: Optional[str] = None
+    ):
+        if log_level or log_file:
+            configure_sdk_logging(
+                level=log_level,
+                log_file=log_file
+            )
+        
+        logger.info("Initializing GraphQL client")
+        logger.debug(f"Sandbox mode: {sandbox}")
+        
+        self.base_url = (
+            "https://ext-api.sb.thetradedesk.com/graphql" if sandbox
+            else "https://api.gen.adsrvr.org/graphql"
+        )
+        
         self.client = httpx.AsyncClient(
             headers={
                 "TTD-Auth": api_key,
                 "Content-Type": "application/json"
-            }
+            },
+            timeout=timeout
         )
-        self.url = environment.value
         self._query_cache = {}
-        self._type_cache = {}
-
+        
     def load_query(self, name: str) -> str:
         if name not in self._query_cache:
             query_path = Path(__file__).parent / 'queries' / f"{name}.graphql"
-            print(f"Looking for query at: {query_path}")  # Debug path
+            logger.debug(f"Loading query from path: {query_path}")
+            
             if not query_path.exists():
+                logger.error(f"Query file not found: {query_path}")
                 raise FileNotFoundError(f"Query file not found: {query_path}")
+                
             self._query_cache[name] = query_path.read_text()
+            logger.debug(f"Cached query: {name}")
+            
         return self._query_cache[name]
 
-    def create_type_from_data(self, name: str, data: dict) -> type:
-        if name in self._type_cache:
-            return self._type_cache[name]
-
-        fields = []
-        for key, value in data.items():
-            if isinstance(value, dict):
-                field_type = self.create_type_from_data(f"{name}_{key}", value)
-            elif isinstance(value, list) and value and isinstance(value[0], dict):
-                item_type = self.create_type_from_data(f"{name}_{key}_item", value[0])
-                field_type = list[item_type]
-            else:
-                field_type = type(value) if value is not None else Any
-
-            fields.append((key, field_type))
-
-        cls = make_dataclass(name, fields)
-        self._type_cache[name] = cls
-        return cls
-
-    async def execute_query(
-        self, 
-        query_name: str,
-        variables: Optional[dict] = None
-    ) -> GraphQLResponse[Any]:
+    async def execute_query(self, query_name: str, variables: dict = None, max_retries: int = 3) -> dict:
+        logger.info(f"Executing query: {query_name}")
+        logger.debug(f"Query variables: {variables}")
+        
         query = self.load_query(query_name)
+        retries = 0
         
-        # Debug info
-        print(f"Sending request to: {self.url}")
-        print(f"Headers: {self.client.headers}")
-        print(f"Query: {query[:200]}...")  # First 200 chars of query
-        
-        response = await self.client.post(
-            self.url,
-            json={"query": query, "variables": variables}
-        )
-        
-        # Debug info
-        print(f"Response status: {response.status_code}")
-        print(f"Response body: {response.text[:500]}...")  # First 500 chars of response
-        
-        if not response.is_success:
-            return GraphQLResponse(None, [{"message": f"HTTP {response.status_code}"}])
-            
-        result = response.json()
-        
-        if result.get("data"):
-            # Get the first key in data (usually the operation name)
-            operation_name = next(iter(result["data"]))
-            operation_data = result["data"][operation_name]
-            
-            # Create a type based on the response structure
-            response_type = self.create_type_from_data(
-                query_name.title(), 
-                operation_data if isinstance(operation_data, dict) else {"result": operation_data}
-            )
-            
-            # Convert the data to our generated type
-            typed_data = response_type(**operation_data)
-            return GraphQLResponse(typed_data, result.get("errors", []))
-        
-        return GraphQLResponse(None, result.get("errors", []))
+        while retries <= max_retries:
+            try:
+                response = await self.client.post(
+                    self.base_url,
+                    json={"query": query, "variables": variables or {}}
+                )
+                
+                # Handle API Gateway rate limits (HTTP 429)
+                if response.status_code == 429 and retries < max_retries:
+                    retries += 1
+                    logger.warning(f"API Gateway rate limit hit, attempt {retries} of {max_retries}. Waiting 61 seconds...")
+                    await httpx.AsyncClient.sleep(61)
+                    continue
+                    
+                # Handle other non-200 responses
+                if not response.is_success:
+                    logger.error(f"Query failed with status {response.status_code}")
+                    logger.error(f"Response body: {response.text}")
+                    return {"errors": [{"message": f"HTTP {response.status_code}", "details": response.text}]}
+                    
+                response_json = response.json()
+                
+                # Handle GraphQL system errors
+                if "errors" in response_json:
+                    error = response_json["errors"][0]
+                    if error.get("extensions", {}).get("code") == "RESOURCE_LIMIT_EXCEEDED" and retries < max_retries:
+                        retries += 1
+                        logger.warning(f"GraphQL rate/complexity limit hit, attempt {retries} of {max_retries}. Waiting 61 seconds...")
+                        await httpx.AsyncClient.sleep(61)
+                        continue
+                    logger.error(f"GraphQL errors: {json.dumps(response_json['errors'], indent=2)}")
+                
+                return response_json
+                
+            except httpx.TimeoutException as e:
+                logger.error(f"Request timed out: {str(e)}")
+                return {"errors": [{"message": "Request timed out", "details": str(e)}]}
+            except Exception as e:
+                logger.error(f"Unexpected error during query execution: {str(e)}")
+                return {"errors": [{"message": "Unexpected error", "details": str(e)}]}
     
     async def close(self):
+        logger.info("Closing client connection")
         await self.client.aclose()
     
     async def __aenter__(self):

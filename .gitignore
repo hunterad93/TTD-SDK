@@ -39,3 +39,4 @@ Thumbs.db
 .coverage
 
 *.csv
+*.json
