@@ -121,3 +121,72 @@ class TTDGraphQLClient:
     
     async def __aexit__(self, *args):
         await self.close()
+
+    async def fetch_all(self, query_name: str, variables: dict = None) -> dict:
+        logger.info(f"Fetching all pages for query: {query_name}")
+        variables = variables or {}
+        all_data = {}
+        
+        def find_cursors(data: dict) -> dict:
+            """Find all fields that have next pages and their cursors."""
+            cursors = {}
+            
+            def traverse(obj: dict):
+                if not isinstance(obj, dict):
+                    return
+                    
+                for key, value in obj.items():
+                    if isinstance(value, dict):
+                        # Check if this field has pagination
+                        if "nodes" in value and "pageInfo" in value:
+                            if value["pageInfo"].get("hasNextPage"):
+                                cursors[f"{key}_cursor"] = value["pageInfo"]["endCursor"]
+                                logger.debug(f"Found cursor for field {key}: {value['pageInfo']['endCursor']}")
+                        traverse(value)
+            
+            traverse(data)
+            return cursors
+
+        def merge_data(existing: dict, new_data: dict) -> dict:
+            """Merge paginated data, combining node arrays."""
+            if not existing:
+                return new_data
+            
+            def merge_dict(current: dict, new: dict):
+                for key, value in new.items():
+                    if key not in current:
+                        current[key] = value
+                    elif isinstance(value, dict):
+                        if "nodes" in value:
+                            current[key]["nodes"].extend(value["nodes"])
+                            current[key]["pageInfo"] = value["pageInfo"]
+                        else:
+                            merge_dict(current[key], value)
+            
+            result = dict(existing)
+            merge_dict(result, new_data)
+            return result
+
+        while True:
+            response = await self.execute_query(query_name, variables)
+            
+            if "errors" in response:
+                return response
+            
+            data = response.get("data", {})
+            logger.debug(f"Response data: {data}")
+            
+            all_data = merge_data(all_data, data)
+            
+            # Find any fields that have next pages
+            next_cursors = find_cursors(data)
+            logger.debug(f"Found cursors: {next_cursors}")
+            
+            if not next_cursors:
+                break
+            
+            # Update variables with new cursors
+            variables.update(next_cursors)
+            logger.debug(f"Next page variables: {variables}")
+        
+        return {"data": all_data}

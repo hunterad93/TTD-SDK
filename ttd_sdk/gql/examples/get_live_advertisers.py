@@ -15,9 +15,9 @@ async def get_live_advertisers():
     async with TTDGraphQLClient(
         api_key=api_key,
         sandbox=True,
-        log_level="DEBUG"
+        log_level="DEBUG"  # This will show us the pagination happening
     ) as client:
-        result = await client.execute_query(
+        result = await client.fetch_all(
             "GetLiveAdvertiserIds",
             variables={"id": partner_id}
         )
@@ -34,6 +34,9 @@ async def get_live_advertisers():
         print(f"Live advertisers: {len(live_advertisers)}")
         print("\nFirst few live advertisers:")
         for adv in live_advertisers[:5]:
+            print(f"- {adv['id']}")
+        print(f"\nLast few live advertisers:")
+        for adv in live_advertisers[-5:]:
             print(f"- {adv['id']}")
 
 if __name__ == "__main__":

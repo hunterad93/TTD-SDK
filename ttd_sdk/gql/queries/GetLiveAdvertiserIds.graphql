@@ -1,9 +1,13 @@
-query GetLiveAdvertiserIds($id: ID = "") {
+query GetLiveAdvertiserIds($id: ID = "", $advertisers_cursor: String) {
   partner(id: $id) {
-    advertisers {
+    advertisers(after: $advertisers_cursor) {
       nodes {
         id
         isWithLiveCampaigns
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
