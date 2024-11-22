@@ -35,3 +35,8 @@ The following entities are supported by this SDK:
 ## TODO
 - Add support for 'get by name' methods with campaigns and ad groups
 - Add support for additional fees related methods
+
+## Installation:
+```
+pip install git+https://github.com/hunterad93/TTD-SDK.git
+```

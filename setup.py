@@ -11,7 +11,7 @@ setup(
     description="Python SDK for The Trade Desk API",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/hunterad93/ttd_sdk",
+    url="https://github.com/hunterad93/TTD-SDK",
     packages=find_packages(exclude=["tests*"]),
     install_requires=[
         "requests>=2.32.3",
