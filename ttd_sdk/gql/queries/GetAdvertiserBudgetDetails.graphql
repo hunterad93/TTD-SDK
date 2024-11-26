@@ -1,56 +1,79 @@
-query GetAdvertiserBudgetDetails($id: ID = "", $endDate: DateTime!) {
-  advertiser(id: $id) {
-    campaigns(
-      where: {
-        isArchived: {eq: false}
-        endDate: {gte: $endDate}
-      }
-    ) {
-      nodes {
-        id
-        budget {
-          total
-          currentOrUpComing
-        }
-        pacingMode
-        pacingToEndOfFlightDailyRate
-        campaignPacingSettings {
-          isValuePacing
-        }
-        flights {
-          nodes {
-            startDateInclusiveUTC
-            endDateExclusiveUTC
-            budgetInAdvertiserCurrency
-            budgetAllocationMode
-            dailyTargetInAdvertiserCurrency
-            daysRemaining
-            id
-            minimumSpendInAdvertiserCurrency
-          }
-        }
-        adGroups(where: {isEnabled: {eq: true}}) {
-          nodes {
-            id
-            baseBidCPMInAdvertiserCurrency
-            budget {
-              total
-              isFluid
-              currentFlightBudget
+query GetAdvertiserBudgetDetails(
+    $id: ID = "",
+    $endDate: DateTime!,
+    $campaigns_cursor: String,
+    $campaigns_flights_cursor: String,
+    $campaigns_adgroups_cursor: String,
+    $page_size: Int = 25
+) {
+    advertiser(id: $id) {
+        campaigns(
+            first: $page_size,
+            after: $campaigns_cursor,
+            where: {
+                isArchived: {eq: false}
+                endDate: {gte: $endDate}
             }
-            spend {
-              spend
-              riskLevel
+        ) {
+            nodes {
+                id
+                budget {
+                    total
+                    currentOrUpComing
+                }
+                pacingMode
+                pacingToEndOfFlightDailyRate
+                campaignPacingSettings {
+                    isValuePacing
+                }
+                flights(first: $page_size, after: $campaigns_flights_cursor) {
+                    nodes {
+                        id
+                        startDateInclusiveUTC
+                        endDateExclusiveUTC
+                        budgetInAdvertiserCurrency
+                        budgetAllocationMode
+                        dailyTargetInAdvertiserCurrency
+                        daysRemaining
+                    }
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                }
+                adGroups(
+                    first: $page_size,
+                    after: $campaigns_adgroups_cursor,
+                    where: {isEnabled: {eq: true}}
+                ) {
+                    nodes {
+                        id
+                        baseBidCPMInAdvertiserCurrency
+                        budget {
+                            total
+                            isFluid
+                            currentFlightBudget
+                        }
+                        spend {
+                            spend
+                            riskLevel
+                        }
+                        adGroupFlights {
+                            nodes {
+                                dailyTargetInAdvertiserCurrency
+                            }
+                        }
+                    }
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                }
             }
-            adGroupFlights {
-              nodes {
-                dailyTargetInAdvertiserCurrency
-                minimumSpendInAdvertiserCurrency
-              }
+            pageInfo {
+                hasNextPage
+                endCursor
             }
-          }
         }
-      }
     }
-  }
 }

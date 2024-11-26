@@ -1,29 +1,32 @@
-query GetCampaignAndAdGroupFlightsExample($id: ID = "", $campaign_cursor: String = "", $flight_cursor: String = "") {
-  advertiser(id: $id) {
-    id
-    name
-    campaigns(after: $campaign_cursor) {
-      nodes {
+query GetCampaignAndAdGroupFlightsExample(
+    $id: ID = "",
+    $campaigns_cursor: String,
+    $campaigns_flights_cursor: String,
+    $page_size: Int = 25
+) {
+    advertiser(id: $id) {
         id
         name
-        flights(after: $flight_cursor) {
-          nodes {
-            budgetInAdvertiserCurrency
-            startDateInclusiveUTC
-            endDateExclusiveUTC
-            isCurrent
-            id
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
+        campaigns(first: $page_size, after: $campaigns_cursor) {
+            nodes {
+                id
+                name
+                flights(first: $page_size, after: $campaigns_flights_cursor) {
+                    nodes {
+                        id
+                        startDateInclusiveUTC
+                        endDateExclusiveUTC
+                    }
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                }
+            }
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
         }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
     }
-  }
 }

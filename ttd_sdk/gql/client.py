@@ -131,18 +131,21 @@ class TTDGraphQLClient:
             """Find all fields that have next pages and their cursors."""
             cursors = {}
             
-            def traverse(obj: dict):
+            def traverse(obj: dict, path: list[str] = None):
+                path = path or []
                 if not isinstance(obj, dict):
                     return
                     
                 for key, value in obj.items():
+                    current_path = path + [key]
                     if isinstance(value, dict):
                         # Check if this field has pagination
                         if "nodes" in value and "pageInfo" in value:
                             if value["pageInfo"].get("hasNextPage"):
-                                cursors[f"{key}_cursor"] = value["pageInfo"]["endCursor"]
-                                logger.debug(f"Found cursor for field {key}: {value['pageInfo']['endCursor']}")
-                        traverse(value)
+                                cursor_name = "_".join(current_path) + "_cursor"
+                                cursors[cursor_name] = value["pageInfo"]["endCursor"]
+                                logger.debug(f"Found cursor at {'.'.join(current_path)}: {value['pageInfo']['endCursor']}")
+                        traverse(value, current_path)
             
             traverse(data)
             return cursors

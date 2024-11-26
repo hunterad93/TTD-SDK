@@ -6,10 +6,14 @@ from ttd_sdk.gql.client import TTDGraphQLClient
 
 async def get_campaign_flights(client: TTDGraphQLClient, advertiser_id: str) -> None:
     variables = {
-        "id": advertiser_id
+        "id": advertiser_id,
+        "page_size": 25
     }
     
-    response = await client.fetch_all("GetCampaignAndAdGroupFlightsExample", variables)
+    response = await client.fetch_all(
+        query_name="GetCampaignAndAdGroupFlightsExample",
+        variables=variables
+    )
     
     if "errors" in response:
         print("Query failed:", response["errors"])
@@ -29,13 +33,13 @@ async def get_campaign_flights(client: TTDGraphQLClient, advertiser_id: str) -> 
     
     # Print some sample data
     print("\nFirst few campaigns and their flights:")
-    for campaign in campaigns[:3]:  # Show first 3 campaigns
+    for campaign in campaigns[:3]:
         flight_count = len(campaign.get("flights", {}).get("nodes", []))
         print(f"\nCampaign: {campaign['name']} ({campaign['id']})")
         print(f"Total flights: {flight_count}")
         if flight_count > 0:
             print("Sample flights:")
-            for flight in campaign["flights"]["nodes"][:2]:  # Show first 2 flights
+            for flight in campaign["flights"]["nodes"][:2]:
                 print(f"- Flight {flight['id']}: {flight['startDateInclusiveUTC']} to {flight['endDateExclusiveUTC']}")
     
     # Write full results to JSON file
@@ -50,7 +54,7 @@ async def main():
     if not api_key:
         raise ValueError("TTD_API_KEY environment variable is required")
         
-    advertiser_id = "jc1xp06"  # Hardcoded advertiser ID
+    advertiser_id = "l0hmuul"  # Hardcoded advertiser ID
     
     async with TTDGraphQLClient(
         api_key=api_key,
