@@ -1,0 +1,55 @@
+query IngestCampaigns(
+  $id: String = "",
+  $campaigns_cursor: String,
+  $page_size: Int = 25
+) {
+  campaigns(
+    first: $page_size,
+    after: $campaigns_cursor,
+    where: {
+      isArchived: {eq: false}, 
+      isTemplate: {eq: false},
+      advertiserId: {eq: $id}
+    }
+  ) {
+    nodes {
+      autoAllocatorEnabled
+      autoCampaignCapEnabled
+      autoPrioritizationEnabled
+      budget {
+        total
+        currentOrUpComing
+      }
+      funnelLocations
+      id
+      name
+      objective
+      pacingMode
+      pacingToEndOfFlightDailyRate
+      partnerCostPercentageFee
+      spend {
+        current
+        riskLevel
+      }
+      startDate
+      endDate
+      version
+      primaryGoal {
+        averageValue
+        isCustom
+        meetingPercentage
+        target
+        type
+        unit
+      }
+      isProgrammaticGuaranteed
+      advertiser {
+        id
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

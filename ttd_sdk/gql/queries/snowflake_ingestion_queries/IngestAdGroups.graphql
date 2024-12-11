@@ -1,0 +1,78 @@
+query IngestAdGroups($id: String = "", $adGroups_cursor: String, $page_size: Int = 25) {
+  adGroups(
+    first: $page_size
+    after: $adGroups_cursor
+    where: {isTemplate: {eq: false}, advertiserId: {eq: $id}}
+  ) {
+    nodes {
+      baseBidCPMInAdvertiserCurrency
+      channel
+      createdAt
+      displayViewabilityStandardIntegral
+      funnelLocation
+      funnelLocationType
+      isDimensionalBiddingMode
+      isProgrammaticGuaranteed
+      isEnabled
+      koaSettings {
+        koaDimensions {
+          adEnvironment
+          adFormat
+          browser
+          deviceType
+          foldPlacement
+          geography
+          os
+          site
+        }
+      }
+      marketType
+      maxBidCPMInAdvertiserCurrency
+      name
+      qualityAllianceViewabilityProfile
+      spend {
+        riskLevel
+        spend
+      }
+      videoViewabilityStandardIntegral
+      budget {
+        currentFlightBudget
+        total
+        isFluid
+      }
+      id
+      campaign {
+        id
+      }
+      crossDeviceVendor {
+        name
+      }
+      dealsPresent
+      appliedBidLists {
+        nodes {
+          dimensions
+          id
+        }
+      }
+      autoOptimizationSettings {
+        isUseClicksAsConversionsEnabled
+        isUseSecondaryConversionsEnabled
+      }
+      valueAddedProviders
+      viewabilityProfile
+      privateContractDefaultAdjustment
+      impressionFrequencyCounters {
+        nodes {
+          counterAttribute
+          id
+          resetIntervalInMinutes
+          name
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

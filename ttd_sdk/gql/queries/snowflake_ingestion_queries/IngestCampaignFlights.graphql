@@ -1,0 +1,43 @@
+query IngestCampaignFlights(
+  $id: String = "",
+  $campaigns_cursor: String,
+  $page_size: Int = 25
+) {
+  campaigns(
+    first: $page_size,
+    after: $campaigns_cursor,
+    where: {
+      advertiserId: {eq: $id}, 
+      isArchived: {eq: false}, 
+      isTemplate: {eq: false}
+    }
+  ) {
+    nodes {
+      id
+      flights(first: $page_size) {
+        nodes {
+          budgetAllocationMode
+          budgetInAdvertiserCurrency
+          dailyTargetInAdvertiserCurrency
+          endDateExclusiveUTC
+          id
+          isCurrent
+          isDeleted
+          startDateInclusiveUTC
+          # reporting {
+          #   impressions
+          #   spendInAdvertiserCurrency
+          # }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

@@ -1,0 +1,5 @@
+query BulkExportAdGroups($advertiserId: ID = "") {
+  bulkAdGroup(input: {advertiserId: $advertiserId}) {
+    id
+  }
+} 

@@ -1,0 +1,30 @@
+query IngestAdvertisers(
+  $id: String = "",
+  $advertisers_cursor: String,
+  $page_size: Int = 25
+) {
+  advertisers(
+    first: $page_size,
+    after: $advertisers_cursor,
+    where: {
+      partnerId: {eq: $id}
+    }
+  ) {
+    nodes {
+      id
+      isWithLiveCampaigns
+      isWithCampaignsAtRisk
+      industryCategory {
+        name
+      }
+      industrySubCategory {
+        name
+      }
+      name
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

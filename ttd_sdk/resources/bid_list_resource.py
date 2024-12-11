@@ -132,11 +132,18 @@ class BidListResource:
             yield ApiObject(**result)
     
     def batch_get(self, bid_list_ids: List[str]) -> Dict[str, ApiObject]:
-        """Retrieve multiple bid lists in a single request."""
-        response = self.client.post(f"{self.base_path}/batch/get", bid_list_ids)
-            
+        """Retrieve multiple bid lists in a single request. Automatically handles batching for lists longer than 20 ids."""
+        BATCH_SIZE = 20
         results = {}
-        for bid_list_id, bid_list_data in response.get("BatchResponses", {}).items():
-            results[bid_list_id] = ApiObject(**bid_list_data)
+        
+        for i in range(0, len(bid_list_ids), BATCH_SIZE):
+            batch = bid_list_ids[i:i + BATCH_SIZE]
+            response = self.client.post(f"{self.base_path}/batch/get", batch)
             
-        return results
+            batch_results = response.get("BatchResponses", {})
+            results.update(batch_results)
+        
+        return {
+            bid_list_id: ApiObject(**bid_list_data)
+            for bid_list_id, bid_list_data in results.items()
+        }

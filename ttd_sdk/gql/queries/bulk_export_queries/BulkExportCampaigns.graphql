@@ -1,0 +1,5 @@
+query BulkExportCampaigns($advertiserId: ID = "") {
+  bulkCampaign(input: {advertiserId: $advertiserId}) {
+    id
+  }
+}

@@ -1,0 +1,8 @@
+query GetJobProgress($id: ID = "") {
+  jobProgress(id: $id) {
+    id
+    jobStatus
+    resultUrl
+    validationErrors
+  }
+}

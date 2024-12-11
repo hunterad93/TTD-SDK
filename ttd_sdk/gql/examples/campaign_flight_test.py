@@ -11,7 +11,7 @@ async def get_campaign_flights(client: TTDGraphQLClient, advertiser_id: str) -> 
     }
     
     response = await client.fetch_all(
-        query_name="GetCampaignAndAdGroupFlightsExample",
+        query_name="IngestCampaignFlights",
         variables=variables
     )
     
