@@ -3,7 +3,6 @@ from typing import Optional, Dict, Any, Iterator, Literal
 import requests
 
 from .auth import TokenManager
-from .utils.retry import RetryHandler
 from .logging import (
     configure_sdk_logging, 
     get_logger, 
@@ -50,7 +49,7 @@ class TTDClient:
         password: Optional[str] = None,
         partner_id: Optional[str] = None,
         sandbox: bool = True,
-        timeout: int = 120,
+        timeout: int = 240,
         max_retries: int = 3,
         log_level: Optional[LogLevel | int] = None,
         log_file: Optional[str] = None
@@ -92,7 +91,6 @@ class TTDClient:
             sandbox=self.sandbox
         )
         self.base_url = self.token_manager.base_url
-        self.retry_handler = RetryHandler(max_retries=self.max_retries)
 
         # Initialize all resources
         logger.debug("Initializing resources")
@@ -108,6 +106,20 @@ class TTDClient:
         self.activity_logs = ActivityLogResource(self)
         self.additional_fees = AdditionalFeesResource(self)
         self.bid_lists = BidListResource(self)
+
+        self.session = requests.Session()
+        retry_strategy = requests.adapters.Retry(
+            total=max_retries,
+            backoff_factor=61,  # This will make it wait 61 seconds between each retry
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST", "PUT", "DELETE"],
+            raise_on_status=False,
+            respect_retry_after_header=False  # Ignore server's retry-after header
+        )
+        adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
         logger.info("TTD client initialized successfully")
 
     def _get_headers(self) -> Dict[str, str]:
@@ -165,23 +177,20 @@ class TTDClient:
             f"\nBody: {kwargs.get('json')}"
         )
 
-        def request_with_retry():
-            try:
-                response = requests.request(method, url, **kwargs)
+        try:
+            response = self.session.request(method, url, **kwargs)
+            
+            logger.debug(
+                f"Response: {response.status_code} {response.reason}"
+                f"\nResponse body: {response.json()}"
+            )
+            
+            return self._handle_response(response)
                 
-                logger.debug(
-                    f"Response: {response.status_code} {response.reason}"
-                    f"\nResponse body: {response.json()}"
-                )
-                
-                return self._handle_response(response)
-                
-            except requests.exceptions.RequestException as e:
-                if e.response:
-                    return self._handle_response(e.response)
-                raise ClientError(message=str(e))
-
-        return self.retry_handler.execute(request_with_retry)
+        except requests.exceptions.RequestException as e:
+            if e.response:
+                return self._handle_response(e.response)
+            raise ClientError(message=str(e))
 
     def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict:
         return self._make_request("GET", endpoint, params=params)
