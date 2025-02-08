@@ -56,16 +56,9 @@ class BidListResource:
     def update(self, bid_list_id: str, bid_list: ApiObject) -> ApiObject:
         """
         Update an existing bid list.
-        
-        Notes:
-            - BidListAdjustmentType cannot be changed after creation
-            - When changing owner, new owner must be an ancestor of previous owner
         """
-        if getattr(bid_list, 'BidListAdjustmentType', None):
-            raise ValueError("BidListAdjustmentType cannot be changed after creation")
-            
         data = bid_list.to_dict()
-        response = self.client.put(f"{self.base_path}/{bid_list_id}", data)
+        response = self.client.put(f"{self.base_path}", data)  # Remove ID from path
         return ApiObject(**response)
     
     def list_by_advertiser(
@@ -147,3 +140,106 @@ class BidListResource:
             bid_list_id: ApiObject(**bid_list_data)
             for bid_list_id, bid_list_data in results.items()
         }
+
+    def delete(self, bid_list_id: str) -> None:
+        """
+        Delete a bid list and its associations.
+
+        Args:
+            bid_list_id: The ID of the bid list to delete
+        """
+        self.client.delete(f"{self.base_path}/{bid_list_id}")
+
+    def list_unassociated(
+        self,
+        partner_id: str,
+        owner_entity_type: str,
+        page_size: int = 100,
+        page_start_index: int = 0
+    ) -> Iterator[ApiObject]:
+        """
+        Retrieve a paged list of unassociated bid lists at a given level of ownership.
+
+        Args:
+            partner_id: The ID of the partner making the query
+            owner_entity_type: The entity type (AdGroup, Campaign, Advertiser, or Partner)
+                             whose unassociated bid lists are to be included
+            page_size: Number of items per page (max 1000, default 100)
+            page_start_index: Zero-based index for pagination start (default 0)
+
+        Yields:
+            ApiObject: Unassociated bid lists matching the query criteria
+        """
+        if page_size > 1000:
+            raise ValueError("Maximum page size is 1000")
+
+        data = {
+            "PartnerId": partner_id,
+            "OwnerEntityType": owner_entity_type,
+            "PageSize": page_size,
+            "PageStartIndex": page_start_index
+        }
+
+        for result in self.client.post_with_pagination(
+            f"{self.base_path}/query/unassociated",
+            data=data,
+            page_size=page_size
+        ):
+            yield ApiObject(**result)
+
+    def list_associated(
+        self,
+        bid_list_id: str,
+        page_size: int = 1000,
+        page_start_index: int = 0,
+        return_ad_groups: bool = False,
+        return_campaigns: bool = False,
+        return_advertisers: bool = False,
+        return_partners: bool = False,
+        return_enabled_only: bool = False
+    ) -> Iterator[ApiObject]:
+        """
+        Retrieve a paged list of entities associated with a specific bid list.
+
+        Args:
+            bid_list_id: The ID of the bid list to query
+            page_size: Number of items per page (max 10000, default 1000)
+            page_start_index: Zero-based index for pagination start (default 0)
+            return_ad_groups: Include associated ad groups in response
+            return_campaigns: Include associated campaigns in response
+            return_advertisers: Include associated advertisers in response
+            return_partners: Include associated partners in response
+            return_enabled_only: Only return enabled associations if True
+
+        Yields:
+            ApiObject: Associated entities matching the query criteria
+
+        Raises:
+            ValueError: If page_size exceeds 1000 or no entity types are selected for return
+        """
+        if page_size > 1000:
+            raise ValueError("Maximum page size is 1000")
+
+        if not any([return_ad_groups, return_campaigns, return_advertisers, return_partners]):
+            raise ValueError(
+                "At least one entity type must be selected "
+                "(ad_groups, campaigns, advertisers, or partners)"
+            )
+
+        data = {
+            "BidListId": bid_list_id,
+            "PageSize": page_size,
+            "PageStartIndex": page_start_index,
+            "ReturnAssociatedAdGroups": return_ad_groups,
+            "ReturnAssociatedCampaigns": return_campaigns,
+            "ReturnAssociatedAdvertisers": return_advertisers,
+            "ReturnAssociatedPartners": return_partners,
+            "ReturnEnabledAssociationOnly": return_enabled_only
+        }
+
+        for result in self.client.post_with_pagination(
+            f"{self.base_path}/query/associated",
+            data=data,
+            page_size=page_size
+        ):
+            yield ApiObject(**result)

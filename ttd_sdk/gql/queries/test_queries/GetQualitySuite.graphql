@@ -1,0 +1,20 @@
+query GetQualitySuite(
+    $adGroups_cursor: String,
+    $page_size: Int = 25
+) {
+    adGroups(
+        first: $page_size,
+        after: $adGroups_cursor,
+        where: {partnerId: {eq: "r93bya6"}}
+    ) {
+        nodes {
+            id
+            isEnabled
+            isQualityAllianceSuiteEnabled
+        }
+        pageInfo {
+            hasNextPage
+            endCursor
+        }
+    }
+}

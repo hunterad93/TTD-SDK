@@ -56,7 +56,9 @@ class CampaignResource:
         Supports partial updates - only fields that are provided will be updated.
         """
         data = campaign.to_dict()
-        response = self.client.put(f"{self.base_path}/{campaign_id}", data)
+        data["CampaignId"] = campaign_id
+        
+        response = self.client.put(self.base_path, data)
         return ApiObject(**response)
     
     def list_by_advertiser(
