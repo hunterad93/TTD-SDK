@@ -36,7 +36,7 @@ from .resources.activity_log_resource import ActivityLogResource
 from .resources.additional_fees_resource import AdditionalFeesResource
 from .resources.bid_list_resource import BidListResource
 from .resources.reports_resource import ReportsResource
-
+from .resources.supply_vendor_resource import SupplyVendorResource
 Method = Literal["GET", "POST"]
 
 logger = get_logger(__name__)
@@ -108,6 +108,7 @@ class TTDClient:
         self.additional_fees = AdditionalFeesResource(self)
         self.bid_lists = BidListResource(self)
         self.reports = ReportsResource(self)
+        self.supply_vendors = SupplyVendorResource(self)
 
         self.session = requests.Session()
         retry_strategy = requests.adapters.Retry(

@@ -41,7 +41,7 @@ class TTDGraphQLClient:
             else "https://api.gen.adsrvr.org/graphql"
         )
         
-        self.client = httpx.AsyncClient(
+        self.client = httpx.Client(
             headers={
                 "TTD-Auth": api_key,
                 "Content-Type": "application/json"
@@ -69,14 +69,15 @@ class TTDGraphQLClient:
             
         return self._query_cache[name]
 
-    async def execute_query(self, query_name: str, variables: dict = None, max_retries: int = 3) -> dict:
+    def execute_query(self, query_name: str, variables: dict = None, max_retries: int = 3) -> dict:
         logger.info(f"Executing query: {query_name}")
         logger.debug(f"Query variables: {variables}")
         
         query = self.load_query(query_name)
         retries = 0
+        
         while retries <= max_retries:
-            response = await self.client.post(
+            response = self.client.post(
                 self.base_url,
                 json={"query": query, "variables": variables or {}}
             )
@@ -84,7 +85,8 @@ class TTDGraphQLClient:
             if response.status_code == 429 and retries < max_retries:
                 retries += 1
                 logger.warning(f"API Gateway rate limit hit, attempt {retries} of {max_retries}. Waiting 61 seconds...")
-                await httpx.AsyncClient.sleep(61)
+                import time
+                time.sleep(61)
                 continue
                 
             response_json = response.json()
@@ -94,17 +96,17 @@ class TTDGraphQLClient:
             
             return response_json
     
-    async def close(self):
+    def close(self):
         logger.info("Closing client connection")
-        await self.client.aclose()
+        self.client.close()
     
-    async def __aenter__(self):
+    def __enter__(self):
         return self
     
-    async def __aexit__(self, *args):
-        await self.close()
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
-    async def fetch_all(self, query_name: str, variables: dict = None) -> dict:
+    def fetch_all(self, query_name: str, variables: dict = None) -> dict:
         logger.info(f"Fetching all pages for query: {query_name}")
         variables = variables or {}
         all_data = {}
@@ -153,7 +155,7 @@ class TTDGraphQLClient:
             return result
 
         while True:
-            response = await self.execute_query(query_name, variables)
+            response = self.execute_query(query_name, variables)
             
             if "errors" in response:
                 return response

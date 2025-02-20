@@ -1,0 +1,7 @@
+mutation DisableQualitySuite($id: ID!) {
+  adGroupUpdate(input: {id: $id, isQualityAllianceSuiteEnabled: false}) {
+    data {
+      isQualityAllianceSuiteEnabled
+    }
+  }
+}
