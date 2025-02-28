@@ -27,13 +27,13 @@ class TokenManager:
             json={
                 "Login": self.username,
                 "Password": self.password,
-                "TokenExpirationInMinutes": 100
+                "TokenExpirationInMinutes": 1000
             }
         )
         response.raise_for_status()
         
         self._token = response.json()["Token"]
-        self._token_expiry = datetime.now() + timedelta(minutes=1430)
+        self._token_expiry = datetime.now() + timedelta(minutes=900)
         logger.debug("New token generated, expires at: %s", self._token_expiry)
         return self._token
 

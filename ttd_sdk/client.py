@@ -37,6 +37,7 @@ from .resources.additional_fees_resource import AdditionalFeesResource
 from .resources.bid_list_resource import BidListResource
 from .resources.reports_resource import ReportsResource
 from .resources.supply_vendor_resource import SupplyVendorResource
+
 Method = Literal["GET", "POST"]
 
 logger = get_logger(__name__)
