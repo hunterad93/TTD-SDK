@@ -147,3 +147,88 @@ class AdditionalFeesResource:
                 fees=[new_fee],  # Pass ApiObject directly
                 start_date=start_date
             )
+    
+    def rename_fee(
+        self,
+        owner_type: str,
+        owner_id: str,
+        old_description: str,
+        new_description: str,
+        start_date: datetime = None
+    ) -> ApiObject:
+        """
+        Rename a fee while preserving all other fees.
+        
+        Args:
+            owner_type: Either "adgroup" or "campaign"
+            owner_id: The ID of the owner entity
+            old_description: Current description of the fee to rename
+            new_description: New description for the fee
+            start_date: When the change should take effect (defaults to 2 hours from now)
+            
+        Returns:
+            ApiObject: The updated fee card
+            
+        Raises:
+            ValueError: If the old description doesn't exist or if new description already exists
+        """
+        if owner_type not in ["adgroup", "campaign"]:
+            raise ValueError('owner_type must be either "adgroup" or "campaign"')
+
+        if start_date is None:
+            start_date = datetime.utcnow() + timedelta(hours=1.1)
+
+        if not self._is_valid_start_date(start_date):
+            raise ValueError("Start date must be at least one hour in the future")
+
+        # Get the owner entity
+        if owner_type == "campaign":
+            response = self.client.campaigns.get(owner_id)
+        else:
+            response = self.client.ad_groups.get(owner_id)
+
+        # Check for existing fee cards
+        if not hasattr(response, 'CurrentAndFutureAdditionalFeeCards') or \
+           len(response.CurrentAndFutureAdditionalFeeCards) == 0:
+            raise ValueError(f"No fee cards found for {owner_type} {owner_id}")
+
+        # Get most recent fee card
+        sorted_cards = sorted(
+            response.CurrentAndFutureAdditionalFeeCards,
+            key=lambda x: x.StartDateUtc,
+            reverse=True
+        )
+        current_fees = sorted_cards[0].Fees
+
+        # Find the fee to rename
+        fee_to_rename = None
+        updated_fees = []
+        
+        for fee in current_fees:
+            if fee.Description == old_description:
+                fee_to_rename = fee
+                # Check if new name already exists
+                if any(f.Description == new_description for f in current_fees):
+                    raise ValueError(
+                        f"Fee with description '{new_description}' already exists"
+                    )
+                # Update description and add to list
+                fee.Description = new_description
+                updated_fees.append(fee)
+            else:
+                updated_fees.append(fee)
+
+        if fee_to_rename is None:
+            raise ValueError(
+                f"Fee with description '{old_description}' not found"
+            )
+
+        # Create update request
+        request = ApiObject(
+            Fees=updated_fees,
+            OwnerId=owner_id,
+            OwnerType=owner_type,
+            StartDateUtc=start_date.isoformat()
+        )
+        
+        return self.update(request)
