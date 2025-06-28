@@ -1,4 +1,5 @@
 from typing import Iterator, Optional, List, Dict
+import time
 from ..models.base import ApiObject
 
 class BidListResource:
@@ -125,9 +126,14 @@ class BidListResource:
             yield ApiObject(**result)
     
     def batch_get(self, bid_list_ids: List[str]) -> Dict[str, ApiObject]:
-        """Retrieve multiple bid lists in a single request. Automatically handles batching for lists longer than 20 ids."""
+        """
+        Retrieve multiple bid lists in a single request. Automatically handles batching for lists longer than 20 ids.
+        Includes a 1-second delay between batch requests to prevent resource exhaustion.
+        """
         BATCH_SIZE = 20
         results = {}
+        
+        total_batches = (len(bid_list_ids) + BATCH_SIZE - 1) // BATCH_SIZE
         
         for i in range(0, len(bid_list_ids), BATCH_SIZE):
             batch = bid_list_ids[i:i + BATCH_SIZE]
@@ -135,6 +141,10 @@ class BidListResource:
             
             batch_results = response.get("BatchResponses", {})
             results.update(batch_results)
+            
+            # Add delay if this isn't the last batch
+            if i + BATCH_SIZE < len(bid_list_ids):
+                time.sleep(1)
         
         return {
             bid_list_id: ApiObject(**bid_list_data)

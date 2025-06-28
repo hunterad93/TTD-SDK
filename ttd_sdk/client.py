@@ -37,6 +37,7 @@ from .resources.additional_fees_resource import AdditionalFeesResource
 from .resources.bid_list_resource import BidListResource
 from .resources.reports_resource import ReportsResource
 from .resources.supply_vendor_resource import SupplyVendorResource
+from .resources.ip_targeting_resource import IPTargetingResource
 
 Method = Literal["GET", "POST"]
 
@@ -110,6 +111,7 @@ class TTDClient:
         self.bid_lists = BidListResource(self)
         self.reports = ReportsResource(self)
         self.supply_vendors = SupplyVendorResource(self)
+        self.ip_targeting = IPTargetingResource(self)
 
         self.session = requests.Session()
         retry_strategy = requests.adapters.Retry(
