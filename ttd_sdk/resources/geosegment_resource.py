@@ -46,3 +46,16 @@ class GeoSegmentResource:
             page_size=page_size
         ):
             yield ApiObject(**result)
+
+    def get_name(self, geo_segment_id: str) -> ApiObject:
+        """
+        Get the identifier and name for a GeoSegment based on identifier.
+        
+        Args:
+            geo_segment_id: The GeoSegment identifier
+            
+        Returns:
+            ApiObject with Id and Name fields
+        """
+        response = self.client.get(f"{self.base_path}/name/{geo_segment_id}")
+        return ApiObject(**response)
