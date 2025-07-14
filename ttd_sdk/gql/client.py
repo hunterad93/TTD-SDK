@@ -69,6 +69,33 @@ class TTDGraphQLClient:
             
         return self._query_cache[name]
 
+    def execute_user_query(self, query: str, variables: dict = None, max_retries: int = 3) -> dict:
+        """Execute a user-provided GraphQL query string."""
+        logger.info(f"Executing user query: {query[:50]}{'...' if len(query) > 50 else ''}")
+        logger.debug(f"Query variables: {variables}")
+        
+        retries = 0
+        
+        while retries <= max_retries:
+            response = self.client.post(
+                self.base_url,
+                json={"query": query, "variables": variables or {}}
+            )
+            
+            if response.status_code == 429 and retries < max_retries:
+                retries += 1
+                logger.warning(f"API Gateway rate limit hit, attempt {retries} of {max_retries}. Waiting 61 seconds...")
+                import time
+                time.sleep(61)
+                continue
+                
+            response_json = response.json()
+            if "errors" in response_json:
+                logger.error(f"GraphQL errors: {json.dumps(response_json['errors'], indent=2)}")
+                raise Exception("GraphQL query failed - see logs for details")
+            
+            return response_json
+
     def execute_query(self, query_name: str, variables: dict = None, max_retries: int = 3) -> dict:
         logger.info(f"Executing query: {query_name}")
         logger.debug(f"Query variables: {variables}")
