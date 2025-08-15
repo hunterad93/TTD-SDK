@@ -40,6 +40,7 @@ from .resources.supply_vendor_resource import SupplyVendorResource
 from .resources.ip_targeting_resource import IPTargetingResource
 from .resources.geosegment_resource import GeoSegmentResource
 from .resources.contract_resource import ContractResource
+from .resources.reds_feed_resource import RedsFeedResource
 
 Method = Literal["GET", "POST"]
 
@@ -116,6 +117,7 @@ class TTDClient:
         self.ip_targeting = IPTargetingResource(self)
         self.geo_segments = GeoSegmentResource(self)
         self.contracts = ContractResource(self)
+        self.reds_feeds = RedsFeedResource(self)
 
         self.session = requests.Session()
         retry_strategy = requests.adapters.Retry(

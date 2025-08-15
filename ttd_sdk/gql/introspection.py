@@ -1,31 +1,61 @@
 import asyncio
 import json
+import sys
 from pathlib import Path
-from client import TTDGraphQLClient
 
-async def fetch_schema(api_key: str):
-    async with TTDGraphQLClient(api_key) as client:
-        response = await client.execute_query("introspection", variables={})
-        
-        if response.data:
-            schema_json = {
-                "__schema": {
-                    "types": response.data.types,
-                    "queryType": response.data.queryType,
-                    "mutationType": response.data.mutationType,
-                    "subscriptionType": response.data.subscriptionType
+# Add the parent directory to the path so we can import the SDK
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from ttd_sdk.gql.client import TTDGraphQLClient
+
+def fetch_schema(api_key: str):
+    # TTDGraphQLClient is not async, so remove async/await
+    with TTDGraphQLClient(api_key) as client:
+        # You'll need to create an introspection query first
+        introspection_query = """
+        query IntrospectionQuery {
+          __schema {
+            types {
+              name
+              kind
+              description
+              fields {
+                name
+                type {
+                  name
+                  kind
                 }
+              }
             }
+            queryType {
+              name
+            }
+            mutationType {
+              name
+            }
+            subscriptionType {
+              name
+            }
+          }
+        }
+        """
+        
+        response = client.execute_user_query(introspection_query)
+        
+        if "data" in response and response["data"]:
+            schema_json = response["data"]
             
-            with open("schema.graphql", "w") as f:
+            with open("schema.json", "w") as f:
                 json.dump(schema_json, f, indent=2)
-            print("Schema saved to schema.graphql")
+            print("Schema saved to schema.json")
         else:
-            print("Error fetching schema:", response.errors)
+            print("Error fetching schema:", response.get("errors"))
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     import os
     load_dotenv()
     api_key = os.getenv("TTD_API_KEY")
-    asyncio.run(fetch_schema(api_key))
+    
+    # Remove asyncio since the client is synchronous
+    fetch_schema(api_key)
