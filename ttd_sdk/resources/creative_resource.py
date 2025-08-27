@@ -94,7 +94,7 @@ class CreativeResource:
         
         data = {
             "AdvertiserId": advertiser_id,
-            "SortFields": [{"FieldName": "CreatedAtUTC", "Direction": "Desc"}]
+            "SortFields": [{"FieldId": "CreatedAtUTC", "Direction": "Desc"}]
         }
         
         if search_terms:
